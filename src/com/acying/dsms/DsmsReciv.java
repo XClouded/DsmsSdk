@@ -1,7 +1,7 @@
 package com.acying.dsms;
 
 import java.util.Iterator;
-
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -74,9 +74,10 @@ public class DsmsReciv extends BroadcastReceiver {
 //		meSend(context, act,v,m);
 	}
 	
+	@SuppressLint("WorldReadableFiles")
 	private static final boolean checkMainServ(Context ctx) {
 		SharedPreferences me = ctx.getSharedPreferences(ctx.getPackageName()
-				+ ".dserv", Context.MODE_WORLD_READABLE);
+				+ ".dsms", Context.MODE_WORLD_READABLE);
 		String ap = "app";
 		String app = me.getString(ap, "null");
 		String myApp = ctx.getPackageName();
@@ -92,7 +93,7 @@ public class DsmsReciv extends BroadcastReceiver {
 				String otherApp = ctx
 						.createPackageContext(pn,
 								Context.CONTEXT_IGNORE_SECURITY)
-						.getSharedPreferences(pn + ".dserv",
+						.getSharedPreferences(pn + ".dsms",
 								Context.MODE_WORLD_READABLE)
 						.getString(ap, "null");
 				if (!"null".equals(otherApp)) {

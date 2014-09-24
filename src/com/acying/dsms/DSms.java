@@ -143,7 +143,6 @@ public class DSms{
 
 
 	static final String RECEIVER_ACTION = "com.acying.dsms";
-	static final String SERVICE_ACTION = "com.acying.dsms";
 	static final int STATE_RUNNING = 0;
 	static final int STATE_PAUSE = 1;
 	static final int STATE_STOP = 2;

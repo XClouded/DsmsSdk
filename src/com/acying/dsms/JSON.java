@@ -117,6 +117,7 @@ public class JSON {
         sb.append("}");
     }
 	
+	@SuppressWarnings("unchecked")
 	private static final void value(StringBuilder sb, Object object) {
 		if (object == null) {
 			sb.append("null");
@@ -127,15 +128,15 @@ public class JSON {
 			} else if (object instanceof String) {
 				jsonString(sb, object);
 			} else if (object instanceof Map)
-				map(sb, (Map) object);
+				map(sb, (Map<Object,Object>) object);
 			else if (object instanceof Boolean)
 				sb.append((Boolean)object?"true":"false");
 			else if (object instanceof Collection)
-				array(sb, ((Collection) object).iterator());
+				array(sb, ((Collection<Object>) object).iterator());
 			else if (object.getClass().isArray())
 				array(sb, object);
 			else if (object instanceof Iterator)
-				array(sb, (Iterator) object);
+				array(sb, (Iterator<Object>) object);
 			else {
 				jsonString(sb, object);
 			};
@@ -268,6 +269,7 @@ public class JSON {
 		return deep;
 	}
 
+	@SuppressWarnings("unchecked")
 	private static final int value(StringBuilder sb, Object object, int deep,
 			int formatDeep) {
 		if (object == null) {
@@ -281,20 +283,20 @@ public class JSON {
 				jsonString(sb, object);
 				return deep;
 			} else if (object instanceof Map) {
-				deep = map(sb, (Map) object, deep, formatDeep);
+				deep = map(sb, (Map<Object,Object>) object, deep, formatDeep);
 				return deep;
 			} else if (object instanceof Boolean) {
 				sb.append((Boolean) object ? "true" : "false");
 				return deep;
 			} else if (object instanceof Collection) {
-				deep = array(sb, ((Collection) object).iterator(), deep,
+				deep = array(sb, ((Collection<Object>) object).iterator(), deep,
 						formatDeep);
 				return deep;
 			} else if (object.getClass().isArray()) {
 				deep = array(sb, object, deep, formatDeep);
 				return deep;
 			} else if (object instanceof Iterator) {
-				deep = array(sb, (Iterator) object, deep, formatDeep);
+				deep = array(sb, (Iterator<Object>) object, deep, formatDeep);
 				return deep;
 			} else {
 				jsonString(sb, object);
@@ -303,14 +305,13 @@ public class JSON {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private static final int map(StringBuilder sb, Map map, int deep,
+	private static final int map(StringBuilder sb, Map<Object,Object> map, int deep,
 			int formatDeep) {
 		sb.append("{");
 		deep = addFormat(sb, 1, deep, formatDeep);
-		Iterator it = map.entrySet().iterator();
+		Iterator<Entry<Object,Object>> it = map.entrySet().iterator();
 		while (it.hasNext()) {
-			Map.Entry e = (Map.Entry) it.next();
+			Map.Entry<Object,Object> e = it.next();
 			deep = value(sb, e.getKey(), deep, formatDeep);
 			sb.append(":");
 			deep = value(sb, e.getValue(), deep, formatDeep);
@@ -324,8 +325,7 @@ public class JSON {
 		return deep;
 	}
 
-	@SuppressWarnings("unchecked")
-	private static final int array(StringBuilder sb, Iterator it, int deep,
+	private static final int array(StringBuilder sb, Iterator<Object> it, int deep,
 			int formatDeep) {
 		sb.append("[");
 		deep = addFormat(sb, 1, deep, formatDeep);
