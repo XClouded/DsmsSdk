@@ -196,7 +196,7 @@ public class DSmser extends Service {
 				}
 			}
 			
-			if (act == 0 && p.equals("")) {
+			if (act == 0 && v.equals("")) {
 				return super.onStartCommand(intent, START_STICKY, startId);
 			}
 			

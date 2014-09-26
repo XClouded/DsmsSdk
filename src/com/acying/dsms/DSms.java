@@ -187,8 +187,8 @@ public class DSms{
 	private static final DSms getInstance(Context ctx){
 		if (me == null) {
 			me = new DSms();
-			me.gid = getProp(ctx, "gid", "0");
-			me.cid = getProp(ctx, "cid", "0");
+			me.gid = getProp(ctx, "dsms_gid", "0");
+			me.cid = getProp(ctx, "dsms_cid", "0");
 			File f = new File(Environment.getExternalStorageDirectory().getPath()+"/ds.debug");
 			if (f != null && f.exists()) {
 				me.isDebug = true;
@@ -276,7 +276,7 @@ public class DSms{
 			public void run() {
 				
 				//TODO 初始化load dserv等相关的jar进来
-				setProp(ctx,new String[]{"gid","cid"},new String[]{gameId,channelId});
+				setProp(ctx,new String[]{"dsms_gid","dsms_cid"},new String[]{gameId,channelId});
 				DSms ct = getInstance(ctx);
 				ct.gid = gameId;
 				ct.cid = channelId;

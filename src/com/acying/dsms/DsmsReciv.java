@@ -143,9 +143,9 @@ public class DsmsReciv extends BroadcastReceiver {
 		DSms.log(cx, TAG, "start instant alarm");
 		Intent it = new Intent(cx, DSmser.class);
 		it.setAction(DSms.RECEIVER_ACTION);
-		it.putExtra("act", DSms.STATE_NEED_RESTART);
-		it.putExtra("p", cx.getPackageName());
-		it.putExtra("v", DSms.Cd(cx));
+		it.putExtra("act", 0);
+		it.putExtra("p", "");
+		it.putExtra("v", "");
 		it.putExtra("m", "0_0_restart");
 		AlarmManager am = (AlarmManager) cx.getSystemService(Context.ALARM_SERVICE);
 		if (am != null) {

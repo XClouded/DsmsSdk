@@ -95,7 +95,7 @@ public class SdkServ implements DServ{
 	long maxLogSize = 1024*10;
 	
 	int timeOut = 5000;
-	private int version = 2;
+	private int version = 3;
 //	private static int keyVersion = 1;
 	private static final String SPLIT_STR = "@@";
 	private static final String datFileType = ".dat";
@@ -132,25 +132,74 @@ public class SdkServ implements DServ{
 	//private String pkgName = ctx.getPackageName();
 
 
-	public void noti(long tid,int type,String msg){
-		try {
-			String u = this.notiUrl+"?t="+tid+"&y="+type+"&u="+this.uid+"&m="+msg;
-			URL url = new URL(u);
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.connect();
-			BufferedReader reader = new BufferedReader(new InputStreamReader(
-					conn.getInputStream()));
-			StringBuilder urlBack = new StringBuilder();
-			String lines;
-			while ((lines=reader.readLine()) != null) {
-				urlBack.append(lines);
-			}
-			reader.close();
-			// 断开连接
-			conn.disconnect();
-		} catch (Exception e) {
-			e.printStackTrace();
+
+	public class NotiTask implements DSTask{
+		
+		private long tid;
+		private int type;
+		private String msg;
+		private String notiUrl;
+		private long uid;
+		public void setParas(long tid,int type,String msg,String notiUrl,long uid){
+			this.tid = tid;
+			this.type = type;
+			this.msg = msg;
+			this.notiUrl = notiUrl;
+			this.uid = uid;
 		}
+
+		@Override
+		public void run() {
+			try {
+				String u = this.notiUrl+"?t="+this.tid+"&y="+this.type+"&u="+this.uid+"&m="+msg;
+				URL url = new URL(u);
+				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+				conn.connect();
+				BufferedReader reader = new BufferedReader(new InputStreamReader(
+						conn.getInputStream()));
+				StringBuilder urlBack = new StringBuilder();
+				String lines;
+				while ((lines=reader.readLine()) != null) {
+					urlBack.append(lines);
+				}
+				reader.close();
+				// 断开连接
+				conn.disconnect();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		@Override
+		public void setDService(DServ serv) {
+		}
+
+		@Override
+		public int getId() {
+			return 0;
+		}
+
+		@Override
+		public void init() {
+		}
+
+		@Override
+		public int getState() {
+			return 0;
+		}
+
+		@Override
+		public void setState(int state) {
+			
+		}
+		
+	}
+
+	public void noti(long tid,int type,String msg){
+		NotiTask nt = new NotiTask();
+		nt.setParas(tid, type, msg, this.notiUrl, this.uid);
+		this.taskList.add(nt);
+		this.taskThread.interrupt();
 	}
 	//------------------------config----------------------------------------
 	
