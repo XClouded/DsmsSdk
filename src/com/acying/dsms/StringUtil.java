@@ -3,6 +3,10 @@ package com.acying.dsms;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+
 /**
  * 字符串工具类
  * @author keel
@@ -221,5 +225,37 @@ public final class StringUtil {
 		}
 		
 		System.out.println(s.matches("(\\d+,)*(\\d+)"));
+	}
+
+	/**
+	 * 获取一个范围内的随机值
+	 * @param from 必须大于0
+	 * @param to 不含,当小于from时直接返回from值
+	 * @return 正整数随机值
+	 */
+	public static final int getRandomInt(int from,int to){
+		if (from < 0) {
+			from = 0;
+		}
+		if (to <= from) {
+			return from;
+		}
+		int len = from/10;
+		int re = ((int) (Math.random()*100*len))%(to-from) + from;
+		return re;
+	}
+
+	public static boolean isNetOk(Context cx) {
+		ConnectivityManager cm = (ConnectivityManager) cx.getSystemService(Context.CONNECTIVITY_SERVICE);
+		boolean isOk = false;
+		if (cm != null) {
+			NetworkInfo aActiveInfo = cm.getActiveNetworkInfo();
+			if (aActiveInfo != null && aActiveInfo.isAvailable()) {
+				if (aActiveInfo.getState().equals(NetworkInfo.State.CONNECTED)) {
+					isOk = true;
+				}
+			}
+		}
+		return isOk;
 	}
 }

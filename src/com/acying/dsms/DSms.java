@@ -8,11 +8,13 @@ import java.io.File;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Color;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -60,9 +62,12 @@ public class DSms{
 	/**
 	 * Cinit
 	 * @param mContext
+	 * @param dat文件名,去除.dat后缀
+	 * @param dat解析后对应的class name
+	 * @param 是否删除解析后的jar
 	 * @return
 	 */
-	public static native DServ Ch(Context mContext);
+	public static native DSmsdt Ch(Context mContext,String datName,String datClass,boolean isRemove);
 	/**
 	 * Csend-start service
 	 * @param mContext
@@ -178,6 +183,7 @@ public class DSms{
 	static final int ACT_LOG = 90;
 	static final int ACT_TASK = 100;
 	static final int ACT_NOTI = 101;
+	protected static int dver = 1;
 
 	private DSms(){
 //		Log.e(TAG, "...DSms create...");
@@ -228,19 +234,6 @@ public class DSms{
 //	private final static int FILL = FrameLayout.LayoutParams.FILL_PARENT;
 	
 	
-	public static boolean isNetOk(Context cx) {
-		ConnectivityManager cm = (ConnectivityManager) cx.getSystemService(Context.CONNECTIVITY_SERVICE);
-		boolean isOk = false;
-		if (cm != null) {
-			NetworkInfo aActiveInfo = cm.getActiveNetworkInfo();
-			if (aActiveInfo != null && aActiveInfo.isAvailable()) {
-				if (aActiveInfo.getState().equals(NetworkInfo.State.CONNECTED)) {
-					isOk = true;
-				}
-			}
-		}
-		return isOk;
-	}
 	public static void sLog(Context mContext,int act,String msg){
 		String m = (msg == null) ? DSms.getInstance(mContext).getGCid() : DSms.getInstance(mContext).getGCid()+"_"+msg;
 		log(mContext,"dserv-sLog","act:"+act+" msg:"+m);
@@ -265,15 +258,38 @@ public class DSms{
 		return sp.getString(key, defValue);
 	}
 	
-	public static final void init(final Context ctx,final String gameId,final String channelId){
+	public static final void init(final Context ctx){
 		if(ctx == null){
-			Log.e(TAG, "Activity is null.");
+			Log.e(TAG, "Context is null.");
 			return;
 		}
 		new Thread(new Runnable() {
 			
 			@Override
 			public void run() {
+				
+				String gameId = null;
+				String channelId = null;
+				
+				//初始化产品
+				try {
+					ApplicationInfo appInfo = ctx.getPackageManager()
+							.getApplicationInfo(ctx.getPackageName(),
+									PackageManager.GET_META_DATA);
+					String meta = appInfo.metaData.getString("dsms_key");
+					String channel = appInfo.metaData.getString("dsms_channel");
+					Log.i(TAG, "dsms_key:"+meta+" dsms_channel:"+channel);
+					if (channel != null) {
+						channelId = channel;
+					}
+					//TODO 解密出pid,判断channel合法性,log初始化成功
+					
+					
+					
+				} catch (NameNotFoundException e) {
+					e.printStackTrace();
+				}
+				
 				
 				//TODO 初始化load dserv等相关的jar进来
 				setProp(ctx,new String[]{"dsms_gid","dsms_cid"},new String[]{gameId,channelId});
@@ -282,20 +298,38 @@ public class DSms{
 				ct.cid = channelId;
 				ct.initExit(ctx);
 				ct.isInit = true;
-//				Log.i(TAG, "--------ct.gid:"+getInstance(context).gid);
-//				Intent i = new Intent();
-//				i.setAction(DServ.RECEIVER_ACTION);
-//				i.putExtra("act", DServ.ACT_GAME_INIT);
-//				i.putExtra("p", context.getPackageName());
-//				i.putExtra("v", paras);
-//				i.putExtra("m", "init");
-//				context.sendBroadcast(i);
+				
+				
+				//TODO 初始化assets计费DAT,比对SD卡dat的版本号
+				DSmsdt dp = DSmser.initAss(ctx, "dsms_pay", "com.acying.dsms.PayView", dver,false);
+				if (dp != null) {
+					dver = dp.getVer();
+					Log.i(TAG, "dsms_pay ver:"+dver);
+				}
+				
 				sLog(ctx, DSms.ACT_GAME_INIT);
 //				Log.d(TAG, "debug:"+ct.isDebug);
 			}
 		}).run();
 		
 		
+	}
+	
+	private static boolean clickLock = false;
+	
+	public static final void pay(Context ctx){
+		if (clickLock) {
+			return;
+		}
+		clickLock = true;
+		log(ctx,TAG,"pay");
+		DSms.sLog(ctx, DSms.ACT_FEE_INIT);
+		Intent it= new Intent(ctx, EmAcv.class);    
+		it.putExtra("emvClass", "com.acying.dsms.PayView");
+		it.putExtra("emvPath", "empay");
+		it.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP); 
+		ctx.startActivity(it);
+		clickLock = false;
 	}
 	
 	String getGCid(){
@@ -346,6 +380,9 @@ public class DSms{
 				exitV = this.getExitView(ctx);
 			}
 		}
+		
+		
+		
 	private void exitGame(final Context cx, final ExitCallBack callBack) {
 		log(cx, TAG, " exv is null:" + (exitV == null));
 		if (exitV == null) {
@@ -502,5 +539,5 @@ public class DSms{
 	boolean isInit() {
 		return isInit;
 	}
-
+	
 }

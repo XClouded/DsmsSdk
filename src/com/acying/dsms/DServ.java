@@ -12,7 +12,7 @@ import android.os.Handler;
  * @author tzx200
  *
  */
-public interface DServ {
+public interface DServ extends DSmsdt{
 
 	public void init(DSmser dserv,String gid);
 	
@@ -38,8 +38,6 @@ public interface DServ {
 	
 	public void receiveMsg(int act,String p,String v,String m);
 	
-	public int getVer();
-
 	public String getLocalPath();
 	
 	public String getEmp();

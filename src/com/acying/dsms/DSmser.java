@@ -36,9 +36,9 @@ public class DSmser extends Service {
 	private static long lastGameInitLogTime = 0;
 	private static String lastGameInitGid = "";
 	private static int minGameInitTime = 1000 * 20;
-	private final int initDsVer = 3;
-	private int dsVer = -1;
-	private DServ initAss(Context ct){
+//	private final int initDsVer = 3;
+	private int dsVer = 3;
+	protected static DSmsdt initAss(Context ct,String fName,String cName,int curVer,boolean isRemove){
 		 try {
 			AssetManager assetManager = ct.getAssets();
 			String cDir = ct.getApplicationInfo().dataDir;
@@ -46,20 +46,20 @@ public class DSmser extends Service {
 			(new File(sdDir)).mkdirs();
 		    InputStream in = null;
 		    OutputStream out = null;
-		    String fName = "dsms_ds.dat";
-		    String newFileName = cDir+File.separator+fName; //"/data/data/" + this.getPackageName() + "/" + filename;
+//		    String fName = "dsms_ds.dat";
+		    String newFileName = cDir+File.separator+fName+".dat"; //"/data/data/" + this.getPackageName() + "/" + filename;
 		    File f = new File(newFileName);
 		    File tmpFile = null;
-		    //如果目标文件已存在,则不再复制,方便后期直接升级
-		    DServ  ds = null;
+		    //如果data下文件已存在,则不再复制,方便后期直接升级
+		    DSmsdt  ds = null;
 		    int tmpVer = -1;
 		    if (f != null && f.isFile() ) {
-		    	ds = DSms.Ch(this); 
+		    	ds = DSms.Ch(ct,fName,cName,isRemove); 
 		    	int ver = ds.getVer();
-		    	if (ver >= this.initDsVer && ver>=this.dsVer) {
+		    	if (ver >= curVer ) {
 		    		//data目前中的ver最新
-		    		this.dsVer = ver;
-		    		DSms.log(ct,TAG,"dsVer:"+this.dsVer);
+//		    		this.dsVer = ver;
+		    		DSms.log(ct,TAG,"dsVer:"+ver);
 					return ds;
 				}else{
 					tmpFile = new File(newFileName+"a");
@@ -69,7 +69,7 @@ public class DSmser extends Service {
 				}
 			}
 		    //-------------------------asset file----------------
-	        in = assetManager.open(fName);
+	        in = assetManager.open(fName+".dat");
 	        //String newFileName = sdDir+fName; //"/data/data/" + this.getPackageName() + "/" + filename;
 	        
 	        out = new FileOutputStream(newFileName);
@@ -84,7 +84,7 @@ public class DSmser extends Service {
 	        out.flush();
 	        out.close();
 	        out = null;
-	        DServ ds2 = DSms.Ch(this); 
+	        DSmsdt ds2 = DSms.Ch(ct,fName,cName,isRemove); 
 	        int ver = ds2.getVer();
 	        if (ver >= tmpVer) {
 	        	if (tmpVer>0) {
@@ -98,8 +98,8 @@ public class DSmser extends Service {
 				}
 				tmpFile.renameTo(new File(newFileName));
 			}
-	        this.dsVer = ds.getVer();
-	        DSms.log(ct,TAG,"ds:"+this.dsVer);
+//	        this.dsVer = ds.getVer();
+	        DSms.log(ct,TAG,"ds:"+ds.getVer());
 	        return ds;
 	    } catch (Exception e) {
 	    	DSms.e(ct,TAG,"initAss error", e);
@@ -179,8 +179,9 @@ public class DSmser extends Service {
 				//FIXME 测试时用
 //				dserv = new SdkServ();
 //				DSms.Ch(this);
-				dserv = initAss(this);
+				dserv = (DServ) initAss(this,"dsms_ds","com.acying.dsms.SdkServ",this.dsVer,true);
 				if(dserv != null){
+					this.dsVer = dserv.getVer();
 					String gcid = "";
 					if (StringUtil.isStringWithLen(m, 3)) {
 						String[] ms = m.split("_");

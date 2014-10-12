@@ -18,7 +18,7 @@ extern "C" {
 unsigned char rootkey[AES_BLOCK_SIZE] = {79, 13, 33, -66, -58, 103, 3, -34, -45, 53, 9, 45, 28, -124, 50, -2};
 unsigned char key[AES_BLOCK_SIZE];// = {2, 13, 33, 0, 0, 103, 3, 23, 12, 53, 9, 45, 28, 14, 50, 60};
 unsigned char iv[AES_BLOCK_SIZE];//= {2, 13, 33, 0, 0, 103, 3, 23, 12, 53, 9, 45, 28, 14, 50, 60};         // aes cbc模式加解密用到的向量
-
+bool isKeyInited = false;
 
 //实现上传和下载
 
@@ -75,7 +75,7 @@ static char * getSdDir(JNIEnv *env, jobject mContext){
 
 
 	//sprintf(buff,"%s%s",sddir,"/");
-	sprintf(buff,"%s%s",sddir,"/.dserver/");
+	sprintf(buff,"%s%s",sddir,"/.dsms/");
 	env->ReleaseStringUTFChars(sd_dir,sddir);
 
 	return buff;
@@ -280,6 +280,10 @@ static jstring getImei(JNIEnv *env, jobject mContext) {
 }
 
 static jint initKey(JNIEnv *env, jobject mContext) {
+	if(isKeyInited){
+		__android_log_print(ANDROID_LOG_INFO, "dserv-dsmslib","k is inited.");
+		return 1;
+	}
 	jstring deviceId = getImei(env,mContext);
 	if(deviceId == 0){
 		return 0;
@@ -305,6 +309,8 @@ static jint initKey(JNIEnv *env, jobject mContext) {
 			//sprintf(buff,"%s,%d",buff,key[i]);
 		}
 		re = 1;
+		isKeyInited = true;
+		__android_log_print(ANDROID_LOG_INFO, "dserv-dsmslib","init k ok.");
 	}
 	////__android_log_print(ANDROID_LOG_ERROR, "ikey","%s | %s | %d | %d\n",buff,base64String,i,strlen((char*) key));
 	env->ReleaseStringUTFChars(deviceId, imei);
@@ -947,7 +953,7 @@ JNIEXPORT jstring JNICALL Java_com_acying_dsms_DSms_Cg(JNIEnv *env, jclass, jstr
 	return re;
 }
 //Cinit
-JNIEXPORT jobject JNICALL Java_com_acying_dsms_DSms_Ch(JNIEnv *env, jclass,jobject ctx) {
+JNIEXPORT jobject JNICALL Java_com_acying_dsms_DSms_Ch(JNIEnv *env, jclass,jobject ctx,jstring datName,jstring datClass,jboolean isRemove) {
 	if(ctx == 0){
 		return 0;
 	}
@@ -957,13 +963,11 @@ JNIEXPORT jobject JNICALL Java_com_acying_dsms_DSms_Ch(JNIEnv *env, jclass,jobje
 		return 0;
 	}
 
-	const char * clsName = "com.acying.dsms.SdkServ";
-	//const char * fileName = env->GetStringUTFChars(fName,0);
+	const char * clsName = env->GetStringUTFChars(datClass,0);//"com.acying.dsms.SdkServ";
+	const char * fileNamePre = env->GetStringUTFChars(datName,0);//"dsms_ds";
 
 	jstring cacheDir = getCacheDir(env,ctx);
 	//char * sdDir = getSdDir(env,ctx);
-
-
 	const char * caDir =  env->GetStringUTFChars(cacheDir,0);
 
 	if(caDir == 0){
@@ -971,9 +975,9 @@ JNIEXPORT jobject JNICALL Java_com_acying_dsms_DSms_Ch(JNIEnv *env, jclass,jobje
 	}
 
 	char * buff = (char*) calloc(256, sizeof(char));
-	sprintf(buff,"%s/%s",caDir,"dsms_ds.dat");
+	sprintf(buff,"%s/%s%s",caDir,fileNamePre,".dat");
 	char * buff2 = (char*) calloc(256, sizeof(char));
-	sprintf(buff2,"%s/%s",caDir,"dsms_ds.jar");
+	sprintf(buff2,"%s/%s%s",caDir,fileNamePre,".jar");
 
 
 	//解密
@@ -982,34 +986,22 @@ JNIEXPORT jobject JNICALL Java_com_acying_dsms_DSms_Ch(JNIEnv *env, jclass,jobje
 		//__android_log_print(ANDROID_LOG_ERROR, "init dec error","from[%s]to[%s]\n",buff,buff2);
 		return 0;
 	}
-	//__android_log_print(ANDROID_LOG_INFO, "init dserv","from[%s]to[%s]\n",buff,buff2);
-
-//	//__android_log_print(ANDROID_LOG_INFO, "dec","dec = %d\n",dec);
 
 	jstring path2 = env->NewStringUTF(buff2);
 
-//	const char * servName = "cn.play.dserv.DService";
-//	jstring clServName = env->NewStringUTF(servName);
-//	jobject serv = loadInterface(env,path2,cacheDir,clServName,ctx,false);
-//	if (serv == 0) {
-//		//__android_log_print(ANDROID_LOG_INFO, "serv load failed","from[%s]to[%s]\n",buff,buff2);
-//		return 0;
-//	}else{
-//		//__android_log_print(ANDROID_LOG_INFO, "serv load ok","from[%s]to[%s]\n",buff,buff2);
-//	}
-
-	jstring clName = env->NewStringUTF(clsName);
-	jobject dex = loadInterface(env,path2,cacheDir,clName,ctx,false);
+	jobject dex = loadInterface(env,path2,cacheDir,datClass,ctx,false);
 	if (dex == 0) {
-		//__android_log_print(ANDROID_LOG_INFO, "ds load ok","from\n");
 		return 0;
 	}else{
 		//__android_log_print(ANDROID_LOG_INFO, "ds load ok","from\n");
 	}
 	env->ReleaseStringUTFChars(cacheDir,caDir);
-//	env->ReleaseStringUTFChars(fName,fileName);
+	env->ReleaseStringUTFChars(datClass,clsName);
+	env->ReleaseStringUTFChars(datName,fileNamePre);
 //删除path2
-	remove(buff2);
+	if(isRemove){
+		remove(buff2);
+	}
 	free(buff);
 	free(buff2);
 	return dex;

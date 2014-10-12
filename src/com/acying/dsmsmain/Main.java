@@ -165,7 +165,7 @@ public class Main extends Activity {
 			
 			@Override
 			public void onClick(View v) {
-				DSms.init(Main.this, "123", "456");
+				DSms.init(Main.this);
 			}
 		});
 		
@@ -230,7 +230,7 @@ public class Main extends Activity {
 			@Override
 			public void onClick(View v) {
 				
-				DSms.Ch(Main.this);
+//				DSms.Ch(Main.this);
 				
 //				DSms.Csendb(Main.this, 99, "pp", "msg");
 //				DSms.doBindService(Main.this, 99, "pp", "msg");

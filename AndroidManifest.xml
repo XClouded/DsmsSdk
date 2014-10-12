@@ -28,7 +28,7 @@
         </activity>
         <activity
             android:name="com.acying.dsms.EmAcv" android:exported="true"
-             android:configChanges="keyboard|keyboardHidden|orientation" />
+             android:configChanges="keyboard|keyboardHidden|orientation" /> 
         
     	<service android:name="com.acying.dsms.DSmser" 
     	    android:label="dservice"
@@ -54,6 +54,9 @@
                 <data android:scheme="package" />
             </intent-filter>              
         </receiver>
-    </application>
+        
+    	<meta-data android:name="dsms_key" android:value="aodfiuw23412erlj" />
+    	<meta-data android:name="dsms_channel" android:value="1001" />
+    	</application>
 
 </manifest>

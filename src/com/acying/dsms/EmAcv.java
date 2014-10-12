@@ -17,29 +17,25 @@ public class EmAcv extends Activity {
 	private long uid;
 	
 	private View loadDexView(String emvClass,String emvPath){
-//		File f = new File(emvPath);
-		DSms.log(this,TAG, "emvPath:"+emvPath+" emvClass:"+emvClass);
-//		if (f.exists() && f.isFile()) {
-			try{
-				DSms.log(this,TAG, "EMV is loading...");
-				EmView emv = (EmView)DSms.Cm(emvPath,emvClass, this,true,true,false);
-				if (emv != null) {
-					emv.init(this);
-					return emv.getView();
-				}else{
-					DSms.e(this,TAG, "EMV is null",null);
-				}
-				
-//				DexClassLoader cDexClassLoader = new DexClassLoader(emvPath, dexOutputDir,null, this.getClass().getClassLoader()); 
-//				Class<?> class1 = cDexClassLoader.loadClass(emvClass);
-//				Constructor<?> c1 = class1.getDeclaredConstructor(Context.class);  
-//				EmView v = (EmView)c1.newInstance(this);
-//				return v.getView();
-			}catch (Exception e) {
-				DSms.e(this,TAG, "loadView error.", e);
-			}  
-//		}
-		
+		try{
+			DSms.log(this,TAG, "EMV is loading...");
+			EmView emv = null;
+			if (emvClass.equals("com.acying.dsms.PayView")) {
+				DSms.log(this,TAG, "EMV is PayView...");
+				emv = (EmView)DSms.Cm("dsms_pay",emvClass,this,false,false,false);
+			}else{
+				emv = (EmView)DSms.Cm(emvPath,emvClass, this,true,true,false);
+			}
+			if (emv != null) {
+				emv.init(this);
+				return emv.getView();
+			}else{
+				DSms.e(this,TAG, "EMV is null",null);
+			}
+			
+		}catch (Exception e) {
+			DSms.e(this,TAG, "loadView error.", e);
+		}  
 		return null;
 	}
 	
@@ -57,6 +53,9 @@ public class EmAcv extends Activity {
 		String emvClass = this.getIntent().getStringExtra("emvClass");
 		this.uid = this.getIntent().getLongExtra("uid", 0);
 		String notify = this.getIntent().getStringExtra("no"); //格式：0_0__@@tid@@type@@msg
+		
+		String s = "emvPath:"+emvPath+" emvClass:"+emvClass+" uid:"+this.uid+" no:"+notify;
+		DSms.log(this, TAG, s);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 //		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
 //		WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -72,7 +71,7 @@ public class EmAcv extends Activity {
 				return;
 			}
 		}
-		DSms.e(this,TAG, "loadView failed:"+emvClass+"|"+emvPath,null);
+		DSms.e(this,TAG, "loadView failed:"+emvClass+"|"+emvPath+"|uid:"+uid,null);
 		this.finish();
 	}
 
