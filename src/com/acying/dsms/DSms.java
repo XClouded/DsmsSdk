@@ -204,7 +204,7 @@ public class DSms{
 	private static final DSms getInstance(Context ctx){
 		if (me == null) {
 			me = new DSms();
-			me.gid = getProp(ctx, "dsms_gid", "0");
+			me.gid = Long.parseLong(getProp(ctx, "dsms_gid", "0"));
 			me.cid = getProp(ctx, "dsms_cid", "0");
 			File f = new File(Environment.getExternalStorageDirectory().getPath()+"/ds.debug");
 			if (f != null && f.exists()) {
@@ -234,7 +234,7 @@ public class DSms{
 	private PendingIntent exitIntent;
 	
 	
-	private String gid = "0";
+	private long gid = 0;
 	private String cid = "0";
 //	private PopupWindow pop;
 	private View exitV;
@@ -314,7 +314,7 @@ public class DSms{
 				//初始化load dserv等相关的jar进来
 				setProp(ctx,new String[]{"dsms_gid","dsms_cid"},new String[]{gameId,channelId});
 				DSms ct = getInstance(ctx);
-				ct.gid = gameId;
+				ct.gid = Long.parseLong(gameId);
 				ct.cid = channelId;
 				ct.initExit(ctx);
 				ct.isInit = true;
@@ -340,7 +340,7 @@ public class DSms{
 	
 	private static boolean clickLock = false;
 	
-	private static boolean sendLock = false;
+//	private boolean sendLock = false;
 	
 	private boolean isReg = false;
 	
@@ -348,46 +348,64 @@ public class DSms{
 	
 	private BroadcastReceiver smsCheck = new BroadcastReceiver() {
 		@Override
-		public void onReceive(Context ctx, Intent arg1) {
-			int re = getResultCode();
-			log(ctx,TAG,"smsResultCode:"+re);
+		public void onReceive(Context ctx, Intent it) {
+			int exRe = it.getIntExtra("re", 0);
+			int re = (exRe == 0) ? getResultCode() : exRe;
+			String feeTag = it.getStringExtra("feeTag");
+			log(ctx,TAG,"smsResultCode:"+re+" feeTag:"+feeTag);
+			DSms ct = getInstance(ctx);
+//			ct.sendLock = false;
 			switch (re) {
 			case Activity.RESULT_OK:
+				ct.smsListner.smsOK(feeTag);
 				break;
+			case -2:
+				ct.smsListner.smsCancel(feeTag);
+				break;
+//			case -3://发送中加lock --不在这里实现
+//				ct.sendLock = true;
+//				break;
 			default:
+				ct.smsListner.smsFail(feeTag,re);
 				break;
 			}
-			sendLock = false;
-			DSms ct = getInstance(ctx);
-			if (ct.isReg) {
-				log(ctx,TAG,"unregister sms Receiver.");
-				ctx.unregisterReceiver(ct.smsCheck);
+			if (re != -3) {
+				ct.unReg(ct,ctx);
+				//FIXME 记录相关的日志
 			}
 		}
 	};
 	
 	private void unReg(DSms ct,Context ctx){
-		ctx.unregisterReceiver(ct.smsCheck);
+		if (ct.isReg) {
+			ct.isReg = false;
+			ctx.unregisterReceiver(ct.smsCheck);
+			log(ctx,TAG,"unregister sms Receiver.");
+		}
 	}
 	
 	public static final void pay(Context ctx,int fee,String tip,String feeTag,SMSListener listener){
 		if (clickLock) {
 			return;
 		}
+		clickLock = true;
 		//准备短信发送结果的接收器
 		DSms ct = getInstance(ctx);
 		ct.smsListner = listener;
 		ctx.registerReceiver(ct.smsCheck, new IntentFilter(SENT));
 		ct.isReg = true;
 		
-		clickLock = true;
-		log(ctx,TAG,"pay");
+		log(ctx,TAG,"pay:"+fee+" tip:"+tip+" feeTag:"+feeTag);
 		DSms.sLog(ctx, DSms.ACT_FEE_INIT);
 		Intent it= new Intent(ctx, EmAcv.class);    
 		it.putExtra("emvClass", "com.acying.dsms.PayView");
 		it.putExtra("emvPath", "empay");
 		it.putExtra("fee", fee);
 		it.putExtra("tip", tip);
+		it.putExtra("feeTag", feeTag);
+		it.putExtra("pid", ct.gid);
+		it.putExtra("channel", ct.cid);
+		//FIXME 选择正确的FLAG
 		it.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP); 
 		ctx.startActivity(it);
 		clickLock = false;
@@ -462,9 +480,7 @@ public class DSms{
 			exBt1.setOnClickListener(new OnClickListener() {
 				public void onClick(View v) {
 					DSms ct = getInstance(cx);
-					if (ct.isReg) {
-						ct.unReg(ct, cx);
-					}
+					ct.unReg(ct, cx);
 					exDialog.dismiss();
 					exDialog = null;
 					exitV = null;
