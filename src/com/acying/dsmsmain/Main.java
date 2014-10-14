@@ -57,7 +57,7 @@ public class Main extends Activity {
 	}
 	
 	static {
-		  System.loadLibrary("dsms");
+		  //System.loadLibrary("dsms");
 		 }
 	
 	private Button bt1;

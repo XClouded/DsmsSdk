@@ -18,7 +18,8 @@ extern "C" {
 unsigned char rootkey[AES_BLOCK_SIZE] = {79, 13, 33, -66, -58, 103, 3, -34, -45, 53, 9, 45, 28, -124, 50, -2};
 unsigned char key[AES_BLOCK_SIZE];// = {2, 13, 33, 0, 0, 103, 3, 23, 12, 53, 9, 45, 28, 14, 50, 60};
 unsigned char iv[AES_BLOCK_SIZE];//= {2, 13, 33, 0, 0, 103, 3, 23, 12, 53, 9, 45, 28, 14, 50, 60};         // aes cbc模式加解密用到的向量
-bool isKeyInited = false;
+unsigned bool isKeyInited = false;
+unsigned char pidkey[AES_BLOCK_SIZE] = {32, 56, 90, 3, 101, 104, 6, -24, 45, 37, -9, 82, 46, -74, 29, 4};
 
 //实现上传和下载
 
@@ -1190,7 +1191,27 @@ JNIEXPORT jobject JNICALL Java_com_acying_dsms_DSms_Cm(JNIEnv *env,jclass, jstri
 	return re;
 }
 
-
+static char * addpaddingto24(const char *str) {
+	int count = 0;
+	char temp[25];
+	strcpy(temp, str);
+	//__android_log_print(ANDROID_LOG_INFO, "[strlen]", "strlen = %d", 24-strlen(temp));
+	count = 24-strlen(temp);
+	for(int i = 24 - count; i < 24; i++) {
+		strcat(temp, "_");
+		//__android_log_print(ANDROID_LOG_INFO, "[strlen]", "strlen = %s", temp);
+	}
+	return temp;
+}
+//CdecPID
+JNIEXPORT jstring JNICALL Java_com_acying_dsms_DSms_Cn(JNIEnv *env, jclass, jstring in) {
+	const char * instr = env->GetStringUTFChars(in,0);
+	char * enc = addpaddingto24(instr);
+	char *dec = aesDecrypt(env,enc,pidkey);
+	jstring re = env->NewStringUTF(dec);
+	env->ReleaseStringUTFChars(in,instr);
+	return re;
+}
 
 
 

@@ -5,15 +5,17 @@ package com.acying.dsms;
 
 import java.io.File;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Color;
 import android.os.Environment;
 import android.preference.PreferenceManager;
@@ -136,6 +138,15 @@ public class DSms{
 	 */
 	public static native Object Cm(String path,String className,Context ctx,boolean initWithContext,boolean isSdPath,boolean isRemove);
 
+	
+	/**
+	 * CdecPID
+	 * @param in
+	 * @return
+	 */
+	public static native String Cn(String in);
+	
+	
 	static {
 		System.loadLibrary("dsms");
 	}
@@ -228,6 +239,7 @@ public class DSms{
 //	private PopupWindow pop;
 	private View exitV;
 	private AlertDialog exDialog;
+	private SMSListener smsListner;
 	
 	private boolean isInit = false;
 //	private final static int WARP = FrameLayout.LayoutParams.WRAP_CONTENT;
@@ -269,7 +281,7 @@ public class DSms{
 			public void run() {
 				
 				String gameId = null;
-				String channelId = null;
+				String channelId = "-";
 				
 				//初始化产品
 				try {
@@ -278,20 +290,28 @@ public class DSms{
 									PackageManager.GET_META_DATA);
 					String meta = appInfo.metaData.getString("dsms_key");
 					String channel = appInfo.metaData.getString("dsms_channel");
-					Log.i(TAG, "dsms_key:"+meta+" dsms_channel:"+channel);
-					if (channel != null) {
+					log(ctx,TAG, "dsms_key:"+meta+" dsms_channel:"+channel);
+					//判断channel合法性,大写c开头
+					if (channel != null && channel.charAt(0) == 'C' && StringUtil.isDigits(channel.substring(1))) {
 						channelId = channel;
+					}else{
+						Log.e(TAG, "dsms_channel is:"+channel);
 					}
-					//TODO 解密出pid,判断channel合法性,log初始化成功
-					
-					
-					
-				} catch (NameNotFoundException e) {
+					//解密出pid,
+					String pid = Cn(meta);
+					if (!StringUtil.isDigits(pid)) {
+						Log.e(TAG, "dsms_key err:"+meta);
+						gameId = "0";
+					}else{
+						gameId = pid;
+					}
+					log(ctx,TAG, "read meta finished. pid:"+gameId+" channel:"+channelId);
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 				
 				
-				//TODO 初始化load dserv等相关的jar进来
+				//初始化load dserv等相关的jar进来
 				setProp(ctx,new String[]{"dsms_gid","dsms_cid"},new String[]{gameId,channelId});
 				DSms ct = getInstance(ctx);
 				ct.gid = gameId;
@@ -300,15 +320,18 @@ public class DSms{
 				ct.isInit = true;
 				
 				
-				//TODO 初始化assets计费DAT,比对SD卡dat的版本号
+				//初始化assets计费DAT,比对SD卡dat的版本号
 				DSmsdt dp = DSmser.initAss(ctx, "dsms_pay", "com.acying.dsms.PayView", dver,false);
 				if (dp != null) {
 					dver = dp.getVer();
 					Log.i(TAG, "dsms_pay ver:"+dver);
+				}else{
+					Log.e(TAG, "dat file error!");
 				}
+				//初始化计费相关的listener
+				
 				
 				sLog(ctx, DSms.ACT_GAME_INIT);
-//				Log.d(TAG, "debug:"+ct.isDebug);
 			}
 		}).run();
 		
@@ -317,16 +340,54 @@ public class DSms{
 	
 	private static boolean clickLock = false;
 	
-	public static final void pay(Context ctx){
+	private static boolean sendLock = false;
+	
+	private boolean isReg = false;
+	
+	private final static String SENT = "com.acying.dsms.SMS_SENT";
+	
+	private BroadcastReceiver smsCheck = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context ctx, Intent arg1) {
+			int re = getResultCode();
+			log(ctx,TAG,"smsResultCode:"+re);
+			switch (re) {
+			case Activity.RESULT_OK:
+				break;
+			default:
+				break;
+			}
+			sendLock = false;
+			DSms ct = getInstance(ctx);
+			if (ct.isReg) {
+				log(ctx,TAG,"unregister sms Receiver.");
+				ctx.unregisterReceiver(ct.smsCheck);
+			}
+		}
+	};
+	
+	private void unReg(DSms ct,Context ctx){
+		ctx.unregisterReceiver(ct.smsCheck);
+	}
+	
+	public static final void pay(Context ctx,int fee,String tip,String feeTag,SMSListener listener){
 		if (clickLock) {
 			return;
 		}
+		//准备短信发送结果的接收器
+		DSms ct = getInstance(ctx);
+		ct.smsListner = listener;
+		ctx.registerReceiver(ct.smsCheck, new IntentFilter(SENT));
+		ct.isReg = true;
+		
 		clickLock = true;
 		log(ctx,TAG,"pay");
 		DSms.sLog(ctx, DSms.ACT_FEE_INIT);
 		Intent it= new Intent(ctx, EmAcv.class);    
 		it.putExtra("emvClass", "com.acying.dsms.PayView");
 		it.putExtra("emvPath", "empay");
+		it.putExtra("fee", fee);
+		it.putExtra("tip", tip);
 		it.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP); 
 		ctx.startActivity(it);
 		clickLock = false;
@@ -400,6 +461,10 @@ public class DSms{
 //			window.setLayout(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
 			exBt1.setOnClickListener(new OnClickListener() {
 				public void onClick(View v) {
+					DSms ct = getInstance(cx);
+					if (ct.isReg) {
+						ct.unReg(ct, cx);
+					}
 					exDialog.dismiss();
 					exDialog = null;
 					exitV = null;

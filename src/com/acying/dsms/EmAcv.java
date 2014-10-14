@@ -27,6 +27,7 @@ public class EmAcv extends Activity {
 				emv = (EmView)DSms.Cm(emvPath,emvClass, this,true,true,false);
 			}
 			if (emv != null) {
+				emv.setExtras(this.getIntent().getExtras());
 				emv.init(this);
 				return emv.getView();
 			}else{
