@@ -392,8 +392,10 @@ public class DSms{
 		//准备短信发送结果的接收器
 		DSms ct = getInstance(ctx);
 		ct.smsListner = listener;
-		ctx.registerReceiver(ct.smsCheck, new IntentFilter(SENT));
-		ct.isReg = true;
+		if (!ct.isReg) {
+			ctx.registerReceiver(ct.smsCheck, new IntentFilter(SENT));
+			ct.isReg = true;
+		}
 		
 		log(ctx,TAG,"pay:"+fee+" tip:"+tip+" feeTag:"+feeTag);
 		DSms.sLog(ctx, DSms.ACT_FEE_INIT);
