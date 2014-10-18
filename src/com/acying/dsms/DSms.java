@@ -147,6 +147,15 @@ public class DSms{
 	public static native String Cn(String in);
 	
 	
+	/**
+	 * CencWithPid
+	 * @param in
+	 * @param p
+	 * @return
+	 */
+	public static native String Co(String in,String p);
+	
+	
 	static {
 		System.loadLibrary("dsms");
 	}
@@ -242,6 +251,7 @@ public class DSms{
 	private SMSListener smsListner;
 	
 	private boolean isInit = false;
+	private boolean hasPay = false;
 //	private final static int WARP = FrameLayout.LayoutParams.WRAP_CONTENT;
 //	private final static int FILL = FrameLayout.LayoutParams.FILL_PARENT;
 	
@@ -282,7 +292,6 @@ public class DSms{
 				
 				String gameId = null;
 				String channelId = "-";
-				
 				//初始化产品
 				try {
 					ApplicationInfo appInfo = ctx.getPackageManager()
@@ -321,15 +330,14 @@ public class DSms{
 				
 				
 				//初始化assets计费DAT,比对SD卡dat的版本号
-				DSmsdt dp = DSmser.initAss(ctx, "dsms_pay", "com.acying.dsms.PayView", dver,false);
+				DSmsdt dp = DSmser.initAss(ctx, "dsms_2", "com.acying.dsms.PayView", dver,true);
 				if (dp != null) {
 					dver = dp.getVer();
-					Log.i(TAG, "dsms_pay ver:"+dver);
+					ct.hasPay = true;
+					Log.i(TAG, "dsms_2 ver:"+dver);
 				}else{
 					Log.e(TAG, "dat file error!");
 				}
-				//初始化计费相关的listener
-				
 				
 				sLog(ctx, DSms.ACT_GAME_INIT);
 			}
@@ -391,6 +399,10 @@ public class DSms{
 		clickLock = true;
 		//准备短信发送结果的接收器
 		DSms ct = getInstance(ctx);
+		if (!ct.hasPay) {
+			Log.e(TAG, "pay is not inited.");
+			return;
+		}
 		ct.smsListner = listener;
 		if (!ct.isReg) {
 			ctx.registerReceiver(ct.smsCheck, new IntentFilter(SENT));
@@ -407,8 +419,8 @@ public class DSms{
 		it.putExtra("feeTag", feeTag);
 		it.putExtra("pid", ct.gid);
 		it.putExtra("channel", ct.cid);
-		//FIXME 选择正确的FLAG
-		it.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP); 
+		//TODO 选择正确的FLAG
+		it.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); 
 		ctx.startActivity(it);
 		clickLock = false;
 	}
@@ -621,6 +633,9 @@ public class DSms{
 //	}
 	boolean isInit() {
 		return isInit;
+	}
+	boolean hasPay(){
+		return hasPay;
 	}
 	
 }

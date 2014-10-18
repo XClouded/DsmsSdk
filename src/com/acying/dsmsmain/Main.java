@@ -128,8 +128,8 @@ public class Main extends Activity {
 //					String dat2 = cacheDir+"/ds.dat";
 //					String jar2 = sdDir+"dsxx2.jar";
 //					String nf = initAss(Main.this);
-					jar = sdDir+"dsms_ds.jar";
-					dat = sdDir+"dsms_ds.dat";
+					jar = sdDir+"dsms_1.jar";
+					dat = sdDir+"dsms_1.dat";
 					
 					boolean ire = CmakeTask(Main.this, jar,dat,true);
 					Log.e(TAG, "make ["+jar +"]:["+dat+"]:"+ire);

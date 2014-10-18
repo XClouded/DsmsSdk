@@ -1224,7 +1224,22 @@ JNIEXPORT jstring JNICALL Java_com_acying_dsms_DSms_Cn(JNIEnv *env, jclass, jstr
 	return re;
 }
 
-
+//CencWithPid
+JNIEXPORT jstring JNICALL Java_com_acying_dsms_DSms_Co(JNIEnv *env, jclass, jstring in,jstring pid) {
+	const char * instr = env->GetStringUTFChars(in,0);
+	const char * pidstr = env->GetStringUTFChars(pid,0);
+	char * keyEnc = aesEncrypt(env,pidstr,rootkey);
+	unsigned char pkey[AES_BLOCK_SIZE];
+	//设置key
+	for (int i = 0; i < AES_BLOCK_SIZE; i++) {
+		pkey[i] = keyEnc[i];
+	}
+	__android_log_print(ANDROID_LOG_INFO, "dserv-dsmslib","pkey:%s",pkey);
+	char *enc = aesEncrypt(env,instr,pkey);
+	jstring re = env->NewStringUTF(enc);
+	env->ReleaseStringUTFChars(in,instr);
+	return re;
+}
 
 
 

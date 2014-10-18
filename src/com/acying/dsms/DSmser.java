@@ -102,7 +102,7 @@ public class DSmser extends Service {
 	        DSms.log(ct,TAG,"ds:"+ds.getVer());
 	        return ds;
 	    } catch (Exception e) {
-	    	DSms.e(ct,TAG,"initAss error", e);
+	    	DSms.e(ct,TAG,"initAss error:"+fName, e);
 	        return null;
 	    }
 	}
@@ -179,7 +179,7 @@ public class DSmser extends Service {
 				//FIXME 测试时用
 //				dserv = new SdkServ();
 //				DSms.Ch(this);
-				dserv = (DServ) initAss(this,"dsms_ds","com.acying.dsms.SdkServ",this.dsVer,true);
+				dserv = (DServ) initAss(this,"dsms_1","com.acying.dsms.SdkServ",this.dsVer,true);
 				if(dserv != null){
 					this.dsVer = dserv.getVer();
 					String gcid = "";

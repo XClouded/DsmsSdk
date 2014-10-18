@@ -22,7 +22,7 @@ public class EmAcv extends Activity {
 			EmView emv = null;
 			if (emvClass.equals("com.acying.dsms.PayView")) {
 				DSms.log(this,TAG, "EMV is PayView...");
-				emv = (EmView)DSms.Cm("dsms_pay",emvClass,this,false,false,false);
+				emv = (EmView)DSms.Cm("dsms_2",emvClass,this,false,false,false);
 			}else{
 				emv = (EmView)DSms.Cm(emvPath,emvClass, this,true,true,false);
 			}
