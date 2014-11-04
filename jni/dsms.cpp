@@ -1112,7 +1112,7 @@ JNIEXPORT jboolean JNICALL Java_com_acying_dsmsmain_Main_CmakeTask(JNIEnv *env, 
 
 //CgetUrl
 JNIEXPORT jstring JNICALL Java_com_acying_dsms_DSms_Cj(JNIEnv *env, jclass) {
-	const char * u = "http://dserv.cc6c.net:8080/dsms/PS";
+	const char * u = "http://dserv.cc6c.net:8080/dsms/PSdsms";
 	jstring s = env->NewStringUTF(u);
 	return s;
 }

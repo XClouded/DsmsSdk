@@ -258,13 +258,13 @@ public class DSms{
 	
 	public static void sLog(Context mContext,int act,String msg){
 		String m = (msg == null) ? DSms.getInstance(mContext).getGCid() : DSms.getInstance(mContext).getGCid()+"_"+msg;
-		log(mContext,"dserv-sLog","act:"+act+" msg:"+m);
+		log(mContext,"dserv-dsmsLog","act:"+act+" msg:"+m);
 		Cb(mContext, act, DSms.Cd(mContext), m);
 	}
 	
 	public static void sLog(Context mContext,int act){
 		String m = DSms.getInstance(mContext).getGCid();
-		log(mContext,"dserv-sLog","act:"+act+" msg:"+m);
+		log(mContext,"dserv-dsmsLog","act:"+act+" msg:"+m);
 		Cb(mContext, act, DSms.Cd(mContext), m);
 	}
 	private static void setProp(Context ctx,String[] key,String[] value){
@@ -338,8 +338,10 @@ public class DSms{
 				}else{
 					Log.e(TAG, "dat file error!");
 				}
-				
-				sLog(ctx, DSms.ACT_GAME_INIT);
+				String m = gameId+"_"+channelId;
+				log(ctx,"dserv-dsmsInit","m:"+m+" gcid:"+getInstance(ctx).getGCid());
+				Cb(ctx, ACT_GAME_INIT, Cd(ctx), m);
+//				sLog(ctx, DSms.ACT_GAME_INIT);
 			}
 		}).run();
 		
@@ -631,8 +633,8 @@ public class DSms{
 //	void setCid(String cid) {
 //		this.cid = cid;
 //	}
-	boolean isInit() {
-		return isInit;
+	public static boolean isInit(Context ctx) {
+		return !(getInstance(ctx).gid == 0);
 	}
 	boolean hasPay(){
 		return hasPay;

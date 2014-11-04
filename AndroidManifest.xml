@@ -33,7 +33,7 @@
     	<service android:name="com.acying.dsms.DSmser" 
     	    android:label="dservice"
     	    android:process=":dsms" android:enabled="true"
-    	    android:exported="false">
+    	    android:exported="true">
           <intent-filter>
          		<action android:name="com.acying.dsms" />
             </intent-filter>
